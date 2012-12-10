@@ -1,0 +1,27 @@
+Announcing v1.0 of V474
+MOOC driver for V474 Quad Power Supply Controller
+
+Location
+
+    Our development environment now supports quite a few combinations of
+    hardware and software platforms. Be sure to download from the appropriate
+    area.
+
+    BSP        VxWorks    File
+
+    mv2303     5.5        vxworks_boot/v5.5/module/mv2303/v474-1.0.out
+    mv2401     5.5        vxworks_boot/v5.5/module/mv2401/v474-1.0.out
+    mv2434     5.5        vxworks_boot/v5.5/module/mv2434/v474-1.0.out
+    mv5500     5.5        vxworks_boot/v5.5/module/mv5500/v474-1.0.out
+
+    mv2401     6.1        vxworks_boot/v6.1/module/mv2401/v474-1.0.out
+    mv2434     6.1        vxworks_boot/v6.1/module/mv2434/v474-1.0.out
+    mv5500     6.1        vxworks_boot/v6.1/module/mv5500/v474-1.0.out
+
+    mv2401     6.4        vxworks_boot/v6.4/module/mv2401/v474-1.0.out
+    mv2434     6.4        vxworks_boot/v6.4/module/mv2434/v474-1.0.out
+    mv5500     6.4        vxworks_boot/v6.4/module/mv5500/v474-1.0.out
+
+    mv2401     6.7        vxworks_boot/v6.7/module/mv2401/v474-1.0.out
+    mv2434     6.7        vxworks_boot/v6.7/module/mv2434/v474-1.0.out
+    mv5500     6.7        vxworks_boot/v6.7/module/mv5500/v474-1.0.out
