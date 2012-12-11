@@ -1,6 +1,8 @@
 // $Id$
 
 #include <vxWorks.h>
+#include <vme.h>
+#include <sysLib.h>
 #include <cstdio>
 #include <stdexcept>
 #include <memory>
@@ -20,7 +22,8 @@ typedef unsigned char type_t;
 #define	REQ_TO_TYPE(a)		OMSPDEF_TO_TYPE(*(OMSP_DEF const*) &(a)->OMSP)
 #define REQ_TO_SUBCODE(req)	((((OMSP_DEF const*)&(req)->OMSP)->chan & 0xf0) >> 4)
 
-#define DATAS(req) (*(unsigned short const*)(req)->data)
+#define DATAS(req)	(*(unsigned short const*)(req)->data)
+#define BASEOFFSET(o)	((o) / sizeof(uint16_t))
 
 // Junk class. Some versions of GCC don't honor the
 // constructor/destructor attributes unless there's a C++ global
@@ -34,7 +37,32 @@ namespace V474 {
     struct Card {
 	uint16_t* baseAddr;
 	vwpp::Mutex mutex;
+
+	static uint16_t* computeBaseAddr(uint8_t);
+
+	Card(uint8_t const dip) : baseAddr(computeBaseAddr(dip))
+	{
+	    if (baseAddr[0xff00 / 2] != 0x01da)
+		throw std::runtime_error("Did not find V474 at configured "
+					 "address");
+	}
+
+     private:
+	Card();
+	Card(Card const&);
+	Card& operator=(Card const&);
     };
+
+    uint16_t* Card::computeBaseAddr(uint8_t const dip)
+    {
+	char* tmp;
+	uint32_t const addr = (uint32_t) dip << 16;
+
+	if (ERROR == sysBusToLocalAdrs(VME_AM_STD_SUP_DATA,
+				       reinterpret_cast<char*>(addr), &tmp))
+	    throw std::runtime_error("illegal A	24 VME address");
+	return reinterpret_cast<uint16_t*>(tmp);
+    }
 
 };
 
@@ -62,6 +90,7 @@ STATUS objectInit(short const oid, V474::Card* const ptr, void const*,
 }
 
 typedef int16_t typReading;
+typedef uint16_t typStatus;
 
 static STATUS devReading(short, RS_REQ const* const req, typReading* const rep,
 			 V474::Card* const* const ivs)
@@ -75,7 +104,7 @@ static STATUS devReading(short, RS_REQ const* const req, typReading* const rep,
     if (chan > 3)
 	return ERR_BADCHN;
 
-    *rep = ((*ivs)->baseAddr)[0x80 + 8 * chan];
+    *rep = ((*ivs)->baseAddr)[BASEOFFSET(0x100 + 16 * chan)];
     return NOERR;
 }
 
@@ -92,7 +121,7 @@ static STATUS devReadSetting(short, RS_REQ const* const req,
     if (chan > 3)
 	return ERR_BADCHN;
 
-    *rep = ((*ivs)->baseAddr)[8 * chan];
+    *rep = ((*ivs)->baseAddr)[BASEOFFSET(16 * chan)];
     return NOERR;
 }
 
@@ -108,18 +137,56 @@ static STATUS devSetting(short, RS_REQ* req, void*,
     if (chan > 3)
 	return ERR_BADCHN;
 
-    ((*ivs)->baseAddr)[8 * chan] = DATAS(req);
+    ((*ivs)->baseAddr)[BASEOFFSET(16 * chan)] = DATAS(req);
     return NOERR;
 }
 
 static STATUS devBasicControl(short, RS_REQ const* const req, void*,
 			      V474::Card* const* const obj)
 {
+    chan_t const chan = REQ_TO_CHAN(req);
+
+    if (req->ILEN != sizeof(typStatus))
+	return ERR_BADLEN;
+    if (req->OFFSET != 0)
+	return ERR_BADOFF;
+    if (chan > 3)
+	return ERR_BADCHN;
+
+    switch (DATAS(req)) {
+     case 1:
+	((*obj)->baseAddr)[BASEOFFSET(0x300 + 16 * chan)] = 0;
+	return NOERR;
+
+     case 2:
+	((*obj)->baseAddr)[BASEOFFSET(0x300 + 16 * chan)] = 1;
+	return NOERR;
+
+     case 3:
+	((*obj)->baseAddr)[BASEOFFSET(0x302 + 16 * chan)] = 1;
+	return NOERR;
+
+     default:
+	return ERR_WRBASCON;
+    }
+    return NOERR;
 }
 
-static STATUS devBasicStatus(short, RS_REQ const* const req, void* const rep,
+static STATUS devBasicStatus(short, RS_REQ const* const req,
+			     typStatus* const rep,
 			     V474::Card* const* const obj)
 {
+    chan_t const chan = REQ_TO_CHAN(req);
+
+    if (req->ILEN != sizeof(typStatus))
+	return ERR_BADLEN;
+    if (req->OFFSET != 0)
+	return ERR_BADOFF;
+    if (chan > 3)
+	return ERR_BADCHN;
+
+    *rep = 0x24ff & ((*obj)->baseAddr)[BASEOFFSET(0x200 + 16 * chan)];
+    return NOERR;
 }
 
 // Creates an instance of the MOOC V474 class.
@@ -133,7 +200,7 @@ STATUS v473_create_mooc_instance(unsigned short const oid,
 	if (cls == -1)
 	    throw std::runtime_error("V474 class is not registered with MOOC");
 
-	std::auto_ptr<V474::Card> ptr(new V474::Card());
+	std::auto_ptr<V474::Card> ptr(new V474::Card(addr));
 
 	if (ptr.get()) {
 	    if (create_instance(oid, cls, ptr.get(), "V474") != NOERR)
