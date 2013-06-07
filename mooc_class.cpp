@@ -66,6 +66,12 @@ namespace V474 {
 
 };
 
+extern "C" {
+    STATUS objectInit(short, V474::Card*, void const*, V474::Card**);
+    STATUS v474_create_mooc_instance(unsigned short, uint8_t);
+    STATUS v474_create_mooc_class(uint8_t);
+};
+
 // Local prototypes...
 
 static void term(void) __attribute__((destructor));
@@ -191,7 +197,7 @@ static STATUS devBasicStatus(short, RS_REQ const* const req,
 
 // Creates an instance of the MOOC V474 class.
 
-STATUS v473_create_mooc_instance(unsigned short const oid,
+STATUS v474_create_mooc_instance(unsigned short const oid,
 				 uint8_t const addr)
 {
     try {
@@ -220,7 +226,7 @@ STATUS v473_create_mooc_instance(unsigned short const oid,
 // Creates the MOOC class for the V474. Instances of V474::Card
 // objects can be attached to instances of this MOOC class.
 
-STATUS v474_create_mooc_class(uint8_t cls)
+STATUS v474_create_mooc_class(uint8_t const cls)
 {
     if (cls < 16) {
 	printf("MOOC class codes need to be 16, or greater.\n");
