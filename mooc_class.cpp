@@ -22,7 +22,19 @@ typedef unsigned char chan_t;
 #define	REQ_TO_CHAN(a)		OMSPDEF_TO_CHAN(*(OMSP_DEF const*) &(a)->OMSP)
 
 #define DATAS(req)	(*(unsigned short const*)(req)->data)
-#define BASEOFFSET(o)	((o) / sizeof(uint16_t))
+
+// Offsets into the memory map.
+
+#define BASE_OFFSET(o)	((o) / sizeof(uint16_t))
+
+#define DAC_OFFSET(c)	BASE_OFFSET((c) << 4)
+#define ADC_OFFSET(c)	BASE_OFFSET(0x100 + ((c) << 4))
+#define STS_OFFSET(c)	BASE_OFFSET(0x200 + ((c) << 4))
+#define ONOFF_OFFSET(c)	BASE_OFFSET(0x300 + ((c) << 4))
+#define RESET_OFFSET(c)	BASE_OFFSET(0x302 + ((c) << 4))
+#define MODID_OFFSET	BASE_OFFSET(0xff00)
+#define VER_OFFSET	BASE_OFFSET(0xff02)
+#define RESET474_OFFSET	BASE_OFFSET(0xfffe)
 
 // Junk class. Some versions of GCC don't honor the
 // constructor/destructor attributes unless there's a C++ global
@@ -109,7 +121,7 @@ static STATUS devReading(short, RS_REQ const* const req, typReading* const rep,
     if (chan > 3)
 	return ERR_BADCHN;
 
-    *rep = ((*ivs)->baseAddr)[BASEOFFSET(0x100 + 16 * chan)];
+    *rep = ((*ivs)->baseAddr)[ADC_OFFSET(chan)];
     return NOERR;
 }
 
@@ -126,7 +138,7 @@ static STATUS devReadSetting(short, RS_REQ const* const req,
     if (chan > 3)
 	return ERR_BADCHN;
 
-    *rep = ((*ivs)->baseAddr)[BASEOFFSET(16 * chan)];
+    *rep = ((*ivs)->baseAddr)[DAC_OFFSET(chan)];
     return NOERR;
 }
 
@@ -142,7 +154,7 @@ static STATUS devSetting(short, RS_REQ* req, void*,
     if (chan > 3)
 	return ERR_BADCHN;
 
-    ((*ivs)->baseAddr)[BASEOFFSET(16 * chan)] = DATAS(req);
+    ((*ivs)->baseAddr)[DAC_OFFSET(chan)] = DATAS(req);
     return NOERR;
 }
 
@@ -160,15 +172,15 @@ static STATUS devBasicControl(short, RS_REQ const* const req, void*,
 
     switch (DATAS(req)) {
      case 1:
-	((*obj)->baseAddr)[BASEOFFSET(0x300 + 16 * chan)] = 0;
+	((*obj)->baseAddr)[ONOFF_OFFSET(chan)] = 0;
 	return NOERR;
 
      case 2:
-	((*obj)->baseAddr)[BASEOFFSET(0x300 + 16 * chan)] = 1;
+	((*obj)->baseAddr)[ONOFF_OFFSET(chan)] = 1;
 	return NOERR;
 
      case 3:
-	((*obj)->baseAddr)[BASEOFFSET(0x302 + 16 * chan)] = 1;
+	((*obj)->baseAddr)[RESET_OFFSET(chan)] = 1;
 	return NOERR;
 
      default:
@@ -190,7 +202,7 @@ static STATUS devBasicStatus(short, RS_REQ const* const req,
     if (chan > 3)
 	return ERR_BADCHN;
 
-    *rep = 0x24ff & ((*obj)->baseAddr)[BASEOFFSET(0x200 + 16 * chan)];
+    *rep = 0x24ff & ((*obj)->baseAddr)[STS_OFFSET(chan)];
     return NOERR;
 }
 
