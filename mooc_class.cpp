@@ -13,14 +13,13 @@ int v474_lock_tmo = 1500;
 int v474_debug = 0;
 
 typedef unsigned char chan_t;
-typedef unsigned char type_t;
+
+// Include some macros used by the CAMAC front-ends. This the V474 and
+// V473 cards are loosely based on the C473 (CAMAC-based) cards, they
+// shared some SSDN definitions. So these macros are useful.
 
 #define OMSPDEF_TO_CHAN(a)	((chan_t) (a).chan)
-#define OMSPDEF_TO_TYPE(a)	((type_t) (a).typ)
-
 #define	REQ_TO_CHAN(a)		OMSPDEF_TO_CHAN(*(OMSP_DEF const*) &(a)->OMSP)
-#define	REQ_TO_TYPE(a)		OMSPDEF_TO_TYPE(*(OMSP_DEF const*) &(a)->OMSP)
-#define REQ_TO_SUBCODE(req)	((((OMSP_DEF const*)&(req)->OMSP)->chan & 0xf0) >> 4)
 
 #define DATAS(req)	(*(unsigned short const*)(req)->data)
 #define BASEOFFSET(o)	((o) / sizeof(uint16_t))
