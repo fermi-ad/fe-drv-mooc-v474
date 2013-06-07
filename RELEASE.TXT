@@ -1,11 +1,12 @@
 Announcing v1.0 of V474
 MOOC driver for V474 Quad Power Supply Controller
 
+    - Initial release.
+
 Location
 
-    Our development environment now supports quite a few combinations of
-    hardware and software platforms. Be sure to download from the appropriate
-    area.
+    Our development environment supports quite a few combinations of hardware
+    and software platforms. Be sure to download from the appropriate area.
 
     BSP        VxWorks    File
 
