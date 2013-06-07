@@ -1,6 +1,9 @@
 Announcing v1.0 of V474
 MOOC driver for V474 Quad Power Supply Controller
 
+The V474 is a VME card that controls four power supplies. This driver is built
+against MOOC 4.3.
+
     - Initial release.
 
 Location
