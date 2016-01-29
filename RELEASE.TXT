@@ -1,10 +1,10 @@
-Announcing v1.0 of V474
+Announcing v1.1 of V474
 MOOC driver for V474 Quad Power Supply Controller
 
 The V474 is a VME card that controls four power supplies. This driver is built
 against MOOC 4.3.
 
-    - Initial release.
+    - 
 
 Location
 
@@ -13,19 +13,19 @@ Location
 
     BSP        VxWorks    File
 
-    mv2303     5.5        vxworks_boot/v5.5/module/mv2303/v474-1.0.out
-    mv2401     5.5        vxworks_boot/v5.5/module/mv2401/v474-1.0.out
-    mv2434     5.5        vxworks_boot/v5.5/module/mv2434/v474-1.0.out
-    mv5500     5.5        vxworks_boot/v5.5/module/mv5500/v474-1.0.out
+    mv2303     5.5        vxworks_boot/v5.5/module/mv2303/v474-1.1.out
+    mv2401     5.5        vxworks_boot/v5.5/module/mv2401/v474-1.1.out
+    mv2434     5.5        vxworks_boot/v5.5/module/mv2434/v474-1.1.out
+    mv5500     5.5        vxworks_boot/v5.5/module/mv5500/v474-1.1.out
 
-    mv2401     6.1        vxworks_boot/v6.1/module/mv2401/v474-1.0.out
-    mv2434     6.1        vxworks_boot/v6.1/module/mv2434/v474-1.0.out
-    mv5500     6.1        vxworks_boot/v6.1/module/mv5500/v474-1.0.out
+    mv2401     6.1        vxworks_boot/v6.1/module/mv2401/v474-1.1.out
+    mv2434     6.1        vxworks_boot/v6.1/module/mv2434/v474-1.1.out
+    mv5500     6.1        vxworks_boot/v6.1/module/mv5500/v474-1.1.out
 
-    mv2401     6.4        vxworks_boot/v6.4/module/mv2401/v474-1.0.out
-    mv2434     6.4        vxworks_boot/v6.4/module/mv2434/v474-1.0.out
-    mv5500     6.4        vxworks_boot/v6.4/module/mv5500/v474-1.0.out
+    mv2401     6.4        vxworks_boot/v6.4/module/mv2401/v474-1.1.out
+    mv2434     6.4        vxworks_boot/v6.4/module/mv2434/v474-1.1.out
+    mv5500     6.4        vxworks_boot/v6.4/module/mv5500/v474-1.1.out
 
-    mv2401     6.7        vxworks_boot/v6.7/module/mv2401/v474-1.0.out
-    mv2434     6.7        vxworks_boot/v6.7/module/mv2434/v474-1.0.out
-    mv5500     6.7        vxworks_boot/v6.7/module/mv5500/v474-1.0.out
+    mv2401     6.7        vxworks_boot/v6.7/module/mv2401/v474-1.1.out
+    mv2434     6.7        vxworks_boot/v6.7/module/mv2434/v474-1.1.out
+    mv5500     6.7        vxworks_boot/v6.7/module/mv5500/v474-1.1.out
