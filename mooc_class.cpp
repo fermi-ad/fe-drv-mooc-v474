@@ -18,8 +18,10 @@ typedef unsigned char chan_t;
 // V473 cards are loosely based on the C473 (CAMAC-based) cards, they
 // shared some SSDN definitions. So these macros are useful.
 
-#define OMSPDEF_TO_CHAN(a)	((chan_t) (a).chan)
-#define	REQ_TO_CHAN(a)		OMSPDEF_TO_CHAN(*(OMSP_DEF const*) &(a)->OMSP)
+#define OMSPDEF_TO_CHAN(a)    ((chan_t) (a).chan & 0x3)
+#define	REQ_TO_CHAN(a)	      OMSPDEF_TO_CHAN(*(OMSP_DEF const*) &(a)->OMSP)
+#define OMSPDEF_TO_ZERODAC(a) (((chan_t) (a).chan & 0x4) != 0)
+#define	REQ_TO_ZERODAC(a)     OMSPDEF_TO_ZERODAC(*(OMSP_DEF const*) &(a)->OMSP)
 
 #define DATAS(req)	(*(unsigned short const*)(req)->data)
 
@@ -49,6 +51,8 @@ namespace V474 {
 	uint16_t* baseAddr;
 	vwpp::Mutex mutex;
 
+	uint16_t lastSetting[4];
+
 	static uint16_t* computeBaseAddr(uint8_t);
 
 	Card(uint8_t const dip) : baseAddr(computeBaseAddr(dip))
@@ -56,7 +60,15 @@ namespace V474 {
 	    if (baseAddr[0xff00 / 2] != 0x01da)
 		throw std::runtime_error("Did not find V474 at configured "
 					 "address");
+
+	    lastSetting[0] = baseAddr[DAC_OFFSET(0)];
+	    lastSetting[1] = baseAddr[DAC_OFFSET(1)];
+	    lastSetting[2] = baseAddr[DAC_OFFSET(2)];
+	    lastSetting[3] = baseAddr[DAC_OFFSET(3)];
 	}
+
+	bool isOff(int const chan) const
+	{ return baseAddr[ONOFF_OFFSET(chan)] == 0; }
 
      private:
 	Card();
@@ -154,7 +166,9 @@ static STATUS devSetting(short, RS_REQ* req, void*,
     if (chan > 3)
 	return ERR_BADCHN;
 
-    ((*ivs)->baseAddr)[DAC_OFFSET(chan)] = DATAS(req);
+    (*ivs)->lastSetting[chan] = DATAS(req);
+    ((*ivs)->baseAddr)[DAC_OFFSET(chan)] =
+	(REQ_TO_ZERODAC(req) && (*ivs)->isOff(chan)) ? 0 : DATAS(req);
     return NOERR;
 }
 
@@ -173,10 +187,14 @@ static STATUS devBasicControl(short, RS_REQ const* const req, void*,
     switch (DATAS(req)) {
      case 1:
 	((*obj)->baseAddr)[ONOFF_OFFSET(chan)] = 0;
+	if (REQ_TO_ZERODAC(req))
+	    ((*obj)->baseAddr)[DAC_OFFSET(chan)] = 0;
 	return NOERR;
 
      case 2:
 	((*obj)->baseAddr)[ONOFF_OFFSET(chan)] = 1;
+	if (REQ_TO_ZERODAC(req))
+	    ((*obj)->baseAddr)[DAC_OFFSET(chan)] = (*obj)->lastSetting[chan];
 	return NOERR;
 
      case 3:
