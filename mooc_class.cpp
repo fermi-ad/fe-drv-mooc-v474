@@ -48,7 +48,7 @@ namespace V474 { class Junk {} junk; };
 namespace V474 {
 
     struct Card {
-	uint16_t* baseAddr;
+	uint16_t* const baseAddr;
 	vwpp::Mutex mutex;
 
 	uint16_t lastSetting[4];
