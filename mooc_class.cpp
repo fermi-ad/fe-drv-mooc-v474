@@ -20,8 +20,6 @@ typedef unsigned char chan_t;
 
 #define OMSPDEF_TO_CHAN(a)    ((chan_t) (a).chan & 0x3)
 #define	REQ_TO_CHAN(a)	      OMSPDEF_TO_CHAN(*(OMSP_DEF const*) &(a)->OMSP)
-#define OMSPDEF_TO_ZERODAC(a) (((chan_t) (a).chan & 0x4) != 0)
-#define	REQ_TO_ZERODAC(a)     OMSPDEF_TO_ZERODAC(*(OMSP_DEF const*) &(a)->OMSP)
 
 #define DATAS(req)	(*(unsigned short const*)(req)->data)
 
@@ -51,11 +49,13 @@ namespace V474 {
 	uint16_t* const baseAddr;
 	vwpp::Mutex mutex;
 
+	bool const zero_dac;
 	uint16_t lastSetting[4];
 
 	static uint16_t* computeBaseAddr(uint8_t);
 
-	Card(uint8_t const dip) : baseAddr(computeBaseAddr(dip))
+	Card(uint8_t const dip, bool const zero_dac) :
+	    baseAddr(computeBaseAddr(dip)), zero_dac(zero_dac)
 	{
 	    if (baseAddr[0xff00 / 2] != 0x01da)
 		throw std::runtime_error("Did not find V474 at configured "
@@ -66,6 +66,8 @@ namespace V474 {
 	    lastSetting[2] = baseAddr[DAC_OFFSET(2)];
 	    lastSetting[3] = baseAddr[DAC_OFFSET(3)];
 	}
+
+	bool zeroDacWhenOff() const { return zero_dac; }
 
 	bool isOff(int const chan) const
 	{ return baseAddr[ONOFF_OFFSET(chan)] == 0; }
@@ -91,7 +93,7 @@ namespace V474 {
 
 extern "C" {
     STATUS objectInit(short, V474::Card*, void const*, V474::Card**);
-    STATUS v474_create_mooc_instance(unsigned short, uint8_t);
+    STATUS v474_create_mooc_instance(unsigned short, uint8_t, int);
     STATUS v474_create_mooc_class(uint8_t);
 };
 
@@ -168,7 +170,7 @@ static STATUS devSetting(short, RS_REQ* req, void*,
 
     (*ivs)->lastSetting[chan] = DATAS(req);
     ((*ivs)->baseAddr)[DAC_OFFSET(chan)] =
-	(REQ_TO_ZERODAC(req) && (*ivs)->isOff(chan)) ? 0 : DATAS(req);
+	((*ivs)->zeroDacWhenOff() && (*ivs)->isOff(chan)) ? 0 : DATAS(req);
     return NOERR;
 }
 
@@ -187,13 +189,13 @@ static STATUS devBasicControl(short, RS_REQ const* const req, void*,
     switch (DATAS(req)) {
      case 1:
 	((*obj)->baseAddr)[ONOFF_OFFSET(chan)] = 0;
-	if (REQ_TO_ZERODAC(req))
+	if ((*obj)->zeroDacWhenOff())
 	    ((*obj)->baseAddr)[DAC_OFFSET(chan)] = 0;
 	return NOERR;
 
      case 2:
 	((*obj)->baseAddr)[ONOFF_OFFSET(chan)] = 1;
-	if (REQ_TO_ZERODAC(req))
+	if ((*obj)->zeroDacWhenOff())
 	    ((*obj)->baseAddr)[DAC_OFFSET(chan)] = (*obj)->lastSetting[chan];
 	return NOERR;
 
@@ -227,7 +229,7 @@ static STATUS devBasicStatus(short, RS_REQ const* const req,
 // Creates an instance of the MOOC V474 class.
 
 STATUS v474_create_mooc_instance(unsigned short const oid,
-				 uint8_t const addr)
+				 uint8_t const addr, int const zero_dac)
 {
     try {
 	short const cls = find_class("V474");
@@ -235,7 +237,7 @@ STATUS v474_create_mooc_instance(unsigned short const oid,
 	if (cls == -1)
 	    throw std::runtime_error("V474 class is not registered with MOOC");
 
-	std::auto_ptr<V474::Card> ptr(new V474::Card(addr));
+	std::auto_ptr<V474::Card> ptr(new V474::Card(addr, zero_dac != 0));
 
 	if (ptr.get()) {
 	    if (create_instance(oid, cls, ptr.get(), "V474") != NOERR)
