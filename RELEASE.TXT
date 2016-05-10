@@ -8,8 +8,9 @@ Changes from v1.2:
 
     - Built against MOOC 4.4.
 
-    - Bit 2 of the channel field in the SSDN indicates that the DAC should
-      be set to zero while the supply is off.
+    - A third argument has been added to the create instance function
+      which indicates whether the DAC output should be set to zero
+      while the supply is off.
 
 Location
 
