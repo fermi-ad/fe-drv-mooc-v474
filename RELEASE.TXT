@@ -12,6 +12,8 @@ Changes from v1.2:
       which indicates whether the DAC output should be set to zero
       while the supply is off.
 
+    - Uses VWPP 2.1 for concurrency and is now safely multithreaded.
+
 Location
 
     Our development environment supports quite a few combinations of hardware

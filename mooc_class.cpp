@@ -1,5 +1,3 @@
-// $Id$
-
 #include <vxWorks.h>
 #include <vme.h>
 #include <sysLib.h>
@@ -45,14 +43,25 @@ namespace V474 { class Junk {} junk; };
 
 namespace V474 {
 
-    struct Card {
+    class Card : public vwpp::Uncopyable {
 	uint16_t* const baseAddr;
 	vwpp::Mutex mutex;
+
+	typedef vwpp::Mutex::PMLock<Card, &Card::mutex> ObjLock;
 
 	bool const zero_dac;
 	uint16_t lastSetting[4];
 
 	static uint16_t* computeBaseAddr(uint8_t);
+
+     public:
+	class Lock : public vwpp::NoHeap {
+	    ObjLock lock;
+	    
+	 public:
+	    explicit Lock(Card& card) : lock(&card) {}
+	    operator ObjLock const& () { return lock; }
+	};
 
 	Card(uint8_t const dip, bool const zero_dac) :
 	    baseAddr(computeBaseAddr(dip)), zero_dac(zero_dac)
@@ -67,15 +76,48 @@ namespace V474 {
 	    lastSetting[3] = baseAddr[DAC_OFFSET(3)];
 	}
 
-	bool zeroDacWhenOff() const { return zero_dac; }
+	void off(ObjLock const&, int const chan)
+	{
+	    baseAddr[ONOFF_OFFSET(chan)] = 0;
+	    if (zero_dac)
+		baseAddr[DAC_OFFSET(chan)] = 0;
+	}
 
-	bool isOff(int const chan) const
+	void on(ObjLock const&, int const chan)
+	{
+	    baseAddr[ONOFF_OFFSET(chan)] = 1;
+	    if (zero_dac)
+		baseAddr[DAC_OFFSET(chan)] = lastSetting[chan];
+	}
+
+	void reset(ObjLock const&, int const chan)
+	{
+	    baseAddr[RESET_OFFSET(chan)] = 1;
+	}
+
+	bool isOff(ObjLock const&, int const chan) const
 	{ return baseAddr[ONOFF_OFFSET(chan)] == 0; }
 
-     private:
-	Card();
-	Card(Card const&);
-	Card& operator=(Card const&);
+	uint16_t adc(ObjLock const&, int const chan)
+	{ return baseAddr[ADC_OFFSET(chan)]; }
+
+	uint16_t dac(ObjLock const& lock, int const chan)
+	{
+	    return (zero_dac && isOff(lock, chan)) ?
+		lastSetting[chan] : baseAddr[DAC_OFFSET(chan)];
+	}
+
+	void dac(ObjLock const& lock, int const chan, uint16_t const val)
+	{
+	    lastSetting[chan] = val;
+	    if (!zero_dac || !isOff(lock, chan))
+		baseAddr[DAC_OFFSET(chan)] = val;
+	}
+
+	uint16_t status(ObjLock const&, int const chan)
+	{
+	    return 0x24ff & baseAddr[STS_OFFSET(chan)];
+	}
     };
 
     uint16_t* Card::computeBaseAddr(uint8_t const dip)
@@ -135,7 +177,9 @@ static STATUS devReading(short, RS_REQ const* const req, typReading* const rep,
     if (chan > 3)
 	return ERR_BADCHN;
 
-    *rep = ((*ivs)->baseAddr)[ADC_OFFSET(chan)];
+    V474::Card::Lock lock(**ivs);
+
+    *rep = (*ivs)->adc(lock, chan);
     return NOERR;
 }
 
@@ -152,7 +196,9 @@ static STATUS devReadSetting(short, RS_REQ const* const req,
     if (chan > 3)
 	return ERR_BADCHN;
 
-    *rep = ((*ivs)->baseAddr)[DAC_OFFSET(chan)];
+    V474::Card::Lock lock(**ivs);
+
+    *rep = (*ivs)->dac(lock, chan);
     return NOERR;
 }
 
@@ -168,9 +214,9 @@ static STATUS devSetting(short, RS_REQ* req, void*,
     if (chan > 3)
 	return ERR_BADCHN;
 
-    (*ivs)->lastSetting[chan] = DATAS(req);
-    ((*ivs)->baseAddr)[DAC_OFFSET(chan)] =
-	((*ivs)->zeroDacWhenOff() && (*ivs)->isOff(chan)) ? 0 : DATAS(req);
+    V474::Card::Lock lock(**ivs);
+
+    (*ivs)->dac(lock, chan, DATAS(req));
     return NOERR;
 }
 
@@ -186,21 +232,19 @@ static STATUS devBasicControl(short, RS_REQ const* const req, void*,
     if (chan > 3)
 	return ERR_BADCHN;
 
+    V474::Card::Lock lock(**obj);
+
     switch (DATAS(req)) {
      case 1:
-	((*obj)->baseAddr)[ONOFF_OFFSET(chan)] = 0;
-	if ((*obj)->zeroDacWhenOff())
-	    ((*obj)->baseAddr)[DAC_OFFSET(chan)] = 0;
+	(*obj)->off(lock, chan);
 	return NOERR;
 
      case 2:
-	((*obj)->baseAddr)[ONOFF_OFFSET(chan)] = 1;
-	if ((*obj)->zeroDacWhenOff())
-	    ((*obj)->baseAddr)[DAC_OFFSET(chan)] = (*obj)->lastSetting[chan];
+	(*obj)->on(lock, chan);
 	return NOERR;
 
      case 3:
-	((*obj)->baseAddr)[RESET_OFFSET(chan)] = 1;
+	(*obj)->reset(lock, chan);
 	return NOERR;
 
      default:
@@ -222,7 +266,9 @@ static STATUS devBasicStatus(short, RS_REQ const* const req,
     if (chan > 3)
 	return ERR_BADCHN;
 
-    *rep = 0x24ff & ((*obj)->baseAddr)[STS_OFFSET(chan)];
+    V474::Card::Lock lock(**obj);
+
+    *rep = (*obj)->status(lock, chan);
     return NOERR;
 }
 
