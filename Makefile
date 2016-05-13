@@ -1,5 +1,3 @@
-# $Id$
-
 VID = 1.3
 PRODUCT = 1
 
