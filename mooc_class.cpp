@@ -3,6 +3,7 @@
 #include <sysLib.h>
 #include <cstdio>
 #include <stdexcept>
+#include <vector>
 #include <memory>
 #include <vwpp-2.1.h>
 #include <mooc++-4.4.h>
@@ -51,8 +52,8 @@ namespace V474 {
 
 	typedef vwpp::Mutex::PMLock<Card, &Card::mutex> ObjLock;
 
-	bool const zero_dac;
-	uint16_t lastSetting[4];
+	std::vector<bool> const zero_dac;
+	uint16_t lastSetting[N_CHAN];
 
 	static uint16_t* computeBaseAddr(uint8_t);
 
@@ -65,8 +66,9 @@ namespace V474 {
 	    operator ObjLock const& () { return lock; }
 	};
 
-	Card(uint8_t const dip, bool const zero_dac) :
-	    baseAddr(computeBaseAddr(dip)), zero_dac(zero_dac)
+	Card(uint8_t const dip, bool const zero_dac[N_CHAN]) :
+	    baseAddr(computeBaseAddr(dip)),
+	    zero_dac(zero_dac, zero_dac + N_CHAN)
 	{
 	    if (baseAddr[0xff00 / 2] != 0x01da)
 		throw std::runtime_error("Did not find V474 at configured "
@@ -81,14 +83,14 @@ namespace V474 {
 	void off(ObjLock const&, int const chan)
 	{
 	    baseAddr[ONOFF_OFFSET(chan)] = 0;
-	    if (zero_dac)
+	    if (zero_dac.at(chan))
 		baseAddr[DAC_OFFSET(chan)] = 0;
 	}
 
 	void on(ObjLock const&, int const chan)
 	{
 	    baseAddr[ONOFF_OFFSET(chan)] = 1;
-	    if (zero_dac)
+	    if (zero_dac.at(chan))
 		baseAddr[DAC_OFFSET(chan)] = lastSetting[chan];
 	}
 
@@ -105,14 +107,14 @@ namespace V474 {
 
 	uint16_t dac(ObjLock const& lock, int const chan)
 	{
-	    return (zero_dac && isOff(lock, chan)) ?
+	    return (zero_dac.at(chan) && isOff(lock, chan)) ?
 		lastSetting[chan] : baseAddr[DAC_OFFSET(chan)];
 	}
 
 	void dac(ObjLock const& lock, int const chan, uint16_t const val)
 	{
 	    lastSetting[chan] = val;
-	    if (!zero_dac || !isOff(lock, chan))
+	    if (!zero_dac.at(chan) || !isOff(lock, chan))
 		baseAddr[DAC_OFFSET(chan)] = val;
 	}
 
@@ -136,8 +138,8 @@ namespace V474 {
 };
 
 extern "C" {
-    STATUS objectInit(short, V474::Card*, void const*, V474::Card**);
-    STATUS v474_create_mooc_instance(unsigned short, uint8_t, int);
+    STATUS v474_create_mooc_instance(unsigned short, uint8_t, int, int, int,
+				     int);
     STATUS v474_create_mooc_class(uint8_t);
 };
 
@@ -157,8 +159,8 @@ static void term(void)
 
 // This function initializes an instance of the MOOC V474 class.
 
-STATUS objectInit(short const oid, V474::Card* const ptr, void const*,
-		  V474::Card** const ivs)
+static STATUS objectInit(short const oid, V474::Card* const ptr, void const*,
+			 V474::Card** const ivs)
 {
     *ivs = ptr;
     return OK;
@@ -276,8 +278,9 @@ static STATUS devBasicStatus(short, RS_REQ const* const req,
 
 // Creates an instance of the MOOC V474 class.
 
-STATUS v474_create_mooc_instance(unsigned short const oid,
-				 uint8_t const addr, int const zero_dac)
+STATUS v474_create_mooc_instance(unsigned short const oid, uint8_t const addr,
+				 int const zCh0, int const zCh1,
+				 int const zCh2, int const zCh3)
 {
     try {
 	short const cls = find_class("V474");
@@ -285,7 +288,10 @@ STATUS v474_create_mooc_instance(unsigned short const oid,
 	if (cls == -1)
 	    throw std::runtime_error("V474 class is not registered with MOOC");
 
-	std::auto_ptr<V474::Card> ptr(new V474::Card(addr, zero_dac != 0));
+	bool const zDac[N_CHAN] = { zCh0 != 0, zCh1 != 0,
+				    zCh2 != 0, zCh3 != 0 };
+	
+	std::auto_ptr<V474::Card> ptr(new V474::Card(addr, zDac));
 
 	if (ptr.get()) {
 	    if (create_instance(oid, cls, ptr.get(), "V474") != NOERR)
