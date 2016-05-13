@@ -34,6 +34,8 @@ typedef unsigned char chan_t;
 #define VER_OFFSET	BASE_OFFSET(0xff02)
 #define RESET474_OFFSET	BASE_OFFSET(0xfffe)
 
+#define N_CHAN	4
+
 // Junk class. Some versions of GCC don't honor the
 // constructor/destructor attributes unless there's a C++ global
 // object needing to be created/destroyed. This small section creates
@@ -174,7 +176,7 @@ static STATUS devReading(short, RS_REQ const* const req, typReading* const rep,
 	return ERR_BADLEN;
     if (req->OFFSET != 0)
 	return ERR_BADOFF;
-    if (chan > 3)
+    if (chan >= N_CHAN)
 	return ERR_BADCHN;
 
     V474::Card::Lock lock(**ivs);
@@ -193,7 +195,7 @@ static STATUS devReadSetting(short, RS_REQ const* const req,
 	return ERR_BADLEN;
     if (req->OFFSET != 0)
 	return ERR_BADOFF;
-    if (chan > 3)
+    if (chan >= N_CHAN)
 	return ERR_BADCHN;
 
     V474::Card::Lock lock(**ivs);
@@ -211,7 +213,7 @@ static STATUS devSetting(short, RS_REQ* req, void*,
 	return ERR_BADLEN;
     if (req->OFFSET != 0)
 	return ERR_BADOFF;
-    if (chan > 3)
+    if (chan >= N_CHAN)
 	return ERR_BADCHN;
 
     V474::Card::Lock lock(**ivs);
@@ -229,7 +231,7 @@ static STATUS devBasicControl(short, RS_REQ const* const req, void*,
 	return ERR_BADLEN;
     if (req->OFFSET != 0)
 	return ERR_BADOFF;
-    if (chan > 3)
+    if (chan >= N_CHAN)
 	return ERR_BADCHN;
 
     V474::Card::Lock lock(**obj);
@@ -263,7 +265,7 @@ static STATUS devBasicStatus(short, RS_REQ const* const req,
 	return ERR_BADLEN;
     if (req->OFFSET != 0)
 	return ERR_BADOFF;
-    if (chan > 3)
+    if (chan >= N_CHAN)
 	return ERR_BADCHN;
 
     V474::Card::Lock lock(**obj);
