@@ -70,7 +70,7 @@ namespace V474 {
 	    baseAddr(computeBaseAddr(dip)),
 	    zero_dac(zero_dac, zero_dac + N_CHAN)
 	{
-	    if (baseAddr[0xff00 / 2] != 0x01da)
+	    if (baseAddr[MODID_OFFSET] != 0x01da)
 		throw std::runtime_error("Did not find V474 at configured "
 					 "address");
 
