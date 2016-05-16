@@ -99,8 +99,8 @@ namespace V474 {
 	    baseAddr[RESET_OFFSET(chan)] = 1;
 	}
 
-	bool isOff(ObjLock const&, int const chan) const
-	{ return baseAddr[ONOFF_OFFSET(chan)] == 0; }
+	bool isOff(ObjLock const& lock, int const chan)
+	{ return (status(lock, chan) & 0x400) == 0; }
 
 	uint16_t adc(ObjLock const&, int const chan)
 	{ return baseAddr[ADC_OFFSET(chan)]; }
