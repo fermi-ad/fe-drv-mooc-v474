@@ -6,7 +6,7 @@
 #include <vector>
 #include <memory>
 #include <vwpp-2.1.h>
-#include <mooc++-4.4.h>
+#include <mooc++-4.6.h>
 
 int v474_lock_tmo = 1500;
 int v474_debug = 0;
