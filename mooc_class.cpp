@@ -334,7 +334,7 @@ STATUS v474_create_mooc_class(uint8_t const cls)
 	return ERROR;
     }
 
-    short const scl[] = { SCPCLS, ALRCLS };
+    short const scl[] = { ALRCLS };
 
     if (NOERR != create_class(cls, NELEMENTS(scl), scl, 6, sizeof(V474::Card*))) {
 	printf("Error returned from create_class()!\n");
