@@ -60,15 +60,15 @@ namespace V474 {
      public:
 	class Lock : public vwpp::NoHeap {
 	    ObjLock lock;
-	    
+
 	 public:
 	    explicit Lock(Card& card) : lock(&card) {}
 	    operator ObjLock const& () { return lock; }
 	};
 
-	Card(uint8_t const dip, bool const zero_dac[N_CHAN]) :
+	Card(uint8_t const dip, bool const zdac[N_CHAN]) :
 	    baseAddr(computeBaseAddr(dip)),
-	    zero_dac(zero_dac, zero_dac + N_CHAN)
+	    zero_dac(zdac, zdac + N_CHAN)
 	{
 	    if (baseAddr[MODID_OFFSET] != 0x01da)
 		throw std::runtime_error("Did not find V474 at configured "
@@ -137,6 +137,12 @@ namespace V474 {
 
 };
 
+typedef int16_t typReading;
+typedef uint16_t typStatus;
+
+static STATUS devBasicStatus(short, RS_REQ const*, typStatus*,
+			     V474::Card* const*);
+
 extern "C" {
     STATUS v474_create_mooc_instance(unsigned short, uint8_t, int, int, int,
 				     int);
@@ -163,11 +169,21 @@ static STATUS objectInit(short const oid, V474::Card* const ptr, void const*,
 			 V474::Card** const ivs)
 {
     *ivs = ptr;
+
+    ALARM_GUTS* const albl = (ALARM_GUTS*) ivs - 1;
+
+    albl->anl_chan = 0;
+    albl->anl_typ = SIGNED_SHORT_TYPE;
+    albl->aread = 0;
+    albl->anotify = albl->dnotify = 0;
+    albl->oid = oid;
+    albl->ivs = ivs;
+    albl->dig_chan = 4;
+    albl->dig_len = 2;
+    albl->dstat = (PMETHOD) devBasicStatus;
+
     return OK;
 }
-
-typedef int16_t typReading;
-typedef uint16_t typStatus;
 
 static STATUS devReading(short, RS_REQ const* const req, typReading* const rep,
 			 V474::Card* const* const ivs)
@@ -290,7 +306,7 @@ STATUS v474_create_mooc_instance(unsigned short const oid, uint8_t const addr,
 
 	bool const zDac[N_CHAN] = { zCh0 != 0, zCh1 != 0,
 				    zCh2 != 0, zCh3 != 0 };
-	
+
 	std::auto_ptr<V474::Card> ptr(new V474::Card(addr, zDac));
 
 	if (ptr.get()) {
@@ -318,7 +334,9 @@ STATUS v474_create_mooc_class(uint8_t const cls)
 	return ERROR;
     }
 
-    if (NOERR != create_class(cls, 0, 0, 6, sizeof(V474::Card*))) {
+    short const scl[] = { SCPCLS, ALRCLS };
+
+    if (NOERR != create_class(cls, NELEMENTS(scl), scl, 6, sizeof(V474::Card*))) {
 	printf("Error returned from create_class()!\n");
 	return ERROR;
     }
