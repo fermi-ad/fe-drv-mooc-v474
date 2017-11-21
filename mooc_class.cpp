@@ -182,6 +182,7 @@ static STATUS objectInit(short const oid, V474::Card* const ptr, void const*,
     albl->dig_len = 2;
     albl->dstat = (PMETHOD) devBasicStatus;
 
+    alarm_tabloids_create(albl);
     return OK;
 }
 
