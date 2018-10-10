@@ -131,7 +131,7 @@ namespace V474 {
 
 	if (ERROR == sysBusToLocalAdrs(VME_AM_STD_SUP_DATA,
 				       reinterpret_cast<char*>(addr), &tmp))
-	    throw std::runtime_error("illegal A	24 VME address");
+	    throw std::runtime_error("illegal A24 VME address");
 	return reinterpret_cast<uint16_t*>(tmp);
     }
 
@@ -198,10 +198,19 @@ static STATUS devReading(short, RS_REQ const* const req, typReading* const rep,
     if (chan >= N_CHAN)
 	return ERR_BADCHN;
 
-    V474::Card::Lock lock(**ivs);
+    try {
+	V474::Card::Lock lock(**ivs);
 
-    *rep = (*ivs)->adc(lock, chan);
-    return NOERR;
+	*rep = (*ivs)->adc(lock, chan);
+	return NOERR;
+    }
+    catch (int16_t status) {
+	return status;
+    }
+    catch (std::exception const& e) {
+	printf("ERROR: devReading threw exception -- %s", e.what());
+	return ERR_DEVICEERROR;
+    }
 }
 
 static STATUS devReadSetting(short, RS_REQ const* const req,
@@ -217,10 +226,19 @@ static STATUS devReadSetting(short, RS_REQ const* const req,
     if (chan >= N_CHAN)
 	return ERR_BADCHN;
 
-    V474::Card::Lock lock(**ivs);
+    try {
+	V474::Card::Lock lock(**ivs);
 
-    *rep = (*ivs)->dac(lock, chan);
-    return NOERR;
+	*rep = (*ivs)->dac(lock, chan);
+	return NOERR;
+    }
+    catch (int16_t status) {
+	return status;
+    }
+    catch (std::exception const& e) {
+	printf("ERROR: devReadSetting threw exception -- %s", e.what());
+	return ERR_DEVICEERROR;
+    }
 }
 
 static STATUS devSetting(short, RS_REQ* req, void*,
@@ -235,10 +253,19 @@ static STATUS devSetting(short, RS_REQ* req, void*,
     if (chan >= N_CHAN)
 	return ERR_BADCHN;
 
-    V474::Card::Lock lock(**ivs);
+    try {
+	V474::Card::Lock lock(**ivs);
 
-    (*ivs)->dac(lock, chan, DATAS(req));
-    return NOERR;
+	(*ivs)->dac(lock, chan, DATAS(req));
+	return NOERR;
+    }
+    catch (int16_t status) {
+	return status;
+    }
+    catch (std::exception const& e) {
+	printf("ERROR: devSetting threw exception -- %s", e.what());
+	return ERR_DEVICEERROR;
+    }
 }
 
 static STATUS devBasicControl(short, RS_REQ const* const req, void*,
@@ -253,25 +280,33 @@ static STATUS devBasicControl(short, RS_REQ const* const req, void*,
     if (chan >= N_CHAN)
 	return ERR_BADCHN;
 
-    V474::Card::Lock lock(**obj);
+    try {
+	V474::Card::Lock lock(**obj);
 
-    switch (DATAS(req)) {
-     case 1:
-	(*obj)->off(lock, chan);
-	return NOERR;
+	switch (DATAS(req)) {
+	 case 1:
+	    (*obj)->off(lock, chan);
+	    return NOERR;
 
-     case 2:
-	(*obj)->on(lock, chan);
-	return NOERR;
+	 case 2:
+	    (*obj)->on(lock, chan);
+	    return NOERR;
 
-     case 3:
-	(*obj)->reset(lock, chan);
-	return NOERR;
+	 case 3:
+	    (*obj)->reset(lock, chan);
+	    return NOERR;
 
-     default:
-	return ERR_WRBASCON;
+	 default:
+	    return ERR_WRBASCON;
+	}
     }
-    return NOERR;
+    catch (int16_t status) {
+	return status;
+    }
+    catch (std::exception const& e) {
+	printf("ERROR: devBasicControl threw exception -- %s", e.what());
+	return ERR_DEVICEERROR;
+    }
 }
 
 static STATUS devBasicStatus(short, RS_REQ const* const req,
@@ -287,10 +322,19 @@ static STATUS devBasicStatus(short, RS_REQ const* const req,
     if (chan >= N_CHAN)
 	return ERR_BADCHN;
 
-    V474::Card::Lock lock(**obj);
+    try {
+	V474::Card::Lock lock(**obj);
 
-    *rep = (*obj)->status(lock, chan);
-    return NOERR;
+	*rep = (*obj)->status(lock, chan);
+	return NOERR;
+    }
+    catch (int16_t status) {
+	return status;
+    }
+    catch (std::exception const& e) {
+	printf("ERROR: devBasicStatus threw exception -- %s", e.what());
+	return ERR_DEVICEERROR;
+    }
 }
 
 // Creates an instance of the MOOC V474 class.
