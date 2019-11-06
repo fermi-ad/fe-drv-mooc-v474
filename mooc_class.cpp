@@ -55,7 +55,7 @@ namespace V474 {
 namespace V474 {
 
     class Card : public vwpp::Uncopyable {
-	uint16_t* const baseAddr;
+	uint16_t volatile* const baseAddr;
 	vwpp::Mutex mutex;
 
 	typedef vwpp::Mutex::PMLock<Card, &Card::mutex> ObjLock;
