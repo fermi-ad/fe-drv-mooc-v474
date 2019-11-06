@@ -11,9 +11,9 @@ int v474_debug = 0;
 
 typedef unsigned char chan_t;
 
-// Include some macros used by the CAMAC front-ends. This the V474 and
-// V473 cards are loosely based on the C473 (CAMAC-based) cards, they
-// shared some SSDN definitions. So these macros are useful.
+// Include some macros used by the CAMAC front-ends. The V474 and V473
+// cards are loosely based on the C473 (CAMAC-based) cards, and they
+// share some SSDN definitions so these macros are useful.
 
 #define OMSPDEF_TO_CHAN(a)    ((chan_t) (a).chan & 0x3)
 #define	REQ_TO_CHAN(a)	      OMSPDEF_TO_CHAN(*(OMSP_DEF const*) &(a)->OMSP)
