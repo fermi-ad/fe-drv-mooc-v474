@@ -40,7 +40,17 @@ typedef unsigned char chan_t;
 // object needing to be created/destroyed. This small section creates
 // an unused object to make sure these functions are called.
 
-namespace V474 { class Junk {} junk; };
+namespace V474 {
+    static HLOG hLog = 0;
+
+    class Junk {
+     public:
+	Junk()
+	{
+	    hLog = logRegister("V474", 1);
+	}
+    } junk;
+};
 
 namespace V474 {
 
@@ -355,12 +365,14 @@ STATUS v474_create_mooc_instance(unsigned short const oid, uint8_t const addr,
 	    if (create_instance(oid, cls, ptr.get(), "V474") != NOERR)
 		throw std::runtime_error("problem creating an instance");
 	    instance_is_reentrant(oid);
-	    printf("New instance of V474 created. Underlying object @ %p.\n",
-		   ptr.release());
+	    logInform1(V474::hLog, "New instance of V474 created. Underlying "
+		       "object @ %p.\n", ptr.release());
 	}
 	return OK;
     }
     catch (std::exception const& e) {
+	logAlarm1(V474::hLog, 0, "Error creating V474 (oid: %d) instance.",
+		  oid);
 	printf("ERROR: %s\n", e.what());
 	return ERROR;
     }
@@ -410,7 +422,5 @@ STATUS v474_create_mooc_class(uint8_t const cls)
 	printf("Error trying to add the basic control handler.\n");
 	return ERROR;
     }
-
-    printf("V474 class successfully registered with MOOC.\n");
     return OK;
 }
