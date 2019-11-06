@@ -1,11 +1,9 @@
 #include <vxWorks.h>
 #include <vme.h>
 #include <sysLib.h>
-#include <cstdio>
-#include <stdexcept>
 #include <vector>
-#include <memory>
-#include <vwpp-2.1.h>
+#include <vwpp-2.4.h>
+#include <errlogLib-2.0.h>
 #include <mooc++-4.6.h>
 
 int v474_lock_tmo = 1500;
@@ -134,7 +132,6 @@ namespace V474 {
 	    throw std::runtime_error("illegal A24 VME address");
 	return reinterpret_cast<uint16_t*>(tmp);
     }
-
 };
 
 typedef int16_t typReading;
