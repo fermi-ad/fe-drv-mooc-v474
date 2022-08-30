@@ -33,8 +33,6 @@ typedef unsigned char chan_t;
 #define VER_OFFSET	BASE_OFFSET(0xff02)
 #define RESET474_OFFSET	BASE_OFFSET(0xfffe)
 
-#define N_CHAN	4
-
 // Junk class. Some versions of GCC don't honor the
 // constructor/destructor attributes unless there's a C++ global
 // object needing to be created/destroyed. This small section creates
@@ -55,14 +53,32 @@ namespace V474 {
 namespace V474 {
     using namespace vwpp::v3_0;
 
+    // Simple wrapper class to range-check channel indices. If a
+    // channel object has been created, it is always in range.
+
+    class Channel {
+	size_t const value;
+
+	Channel();
+
+     public:
+	static size_t const TOTAL = 4;
+
+	Channel(size_t const v) : value(v < TOTAL ? v : throw(ERR_BADCHN)) {}
+
+	operator size_t() const { return value; }
+    };
+
+    // This class controls the underlying hardware.
+
     class Card : public Uncopyable {
 	uint16_t volatile* const baseAddr;
 	Mutex mutex;
 
 	typedef Mutex::PMLock<Card, &Card::mutex> ObjLock;
 
-	bool zero_dac[N_CHAN];
-	uint16_t lastSetting[N_CHAN];
+	bool zero_dac[Channel::TOTAL];
+	uint16_t lastSetting[Channel::TOTAL];
 
 	static uint16_t* computeBaseAddr(uint8_t);
 
@@ -75,7 +91,7 @@ namespace V474 {
 	    operator ObjLock const& () { return lock; }
 	};
 
-	Card(uint8_t const dip, bool const zdac[N_CHAN]) :
+	Card(uint8_t const dip, bool const zdac[Channel::TOTAL]) :
 	    baseAddr(computeBaseAddr(dip))
 	{
 	    zero_dac[0] = zdac[0];
@@ -93,45 +109,45 @@ namespace V474 {
 	    lastSetting[3] = baseAddr[DAC_OFFSET(3)];
 	}
 
-	void off(ObjLock const&, int const chan)
+	void off(ObjLock const&, Channel const chan)
 	{
 	    baseAddr[ONOFF_OFFSET(chan)] = 0;
 	    if (zero_dac[chan])
 		baseAddr[DAC_OFFSET(chan)] = 0;
 	}
 
-	void on(ObjLock const&, int const chan)
+	void on(ObjLock const&, Channel const chan)
 	{
 	    baseAddr[ONOFF_OFFSET(chan)] = 1;
 	    if (zero_dac[chan])
 		baseAddr[DAC_OFFSET(chan)] = lastSetting[chan];
 	}
 
-	void reset(ObjLock const&, int const chan)
+	void reset(ObjLock const&, Channel const chan)
 	{
 	    baseAddr[RESET_OFFSET(chan)] = 1;
 	}
 
-	bool isOff(ObjLock const& lock, int const chan)
+	bool isOff(ObjLock const& lock, Channel const chan)
 	{ return (status(lock, chan) & 0x400) == 0; }
 
-	uint16_t adc(ObjLock const&, int const chan)
+	uint16_t adc(ObjLock const&, Channel const chan)
 	{ return baseAddr[ADC_OFFSET(chan)]; }
 
-	uint16_t dac(ObjLock const& lock, int const chan)
+	uint16_t dac(ObjLock const& lock, Channel const chan)
 	{
 	    return (zero_dac[chan] && isOff(lock, chan)) ?
 		lastSetting[chan] : baseAddr[DAC_OFFSET(chan)];
 	}
 
-	void dac(ObjLock const& lock, int const chan, uint16_t const val)
+	void dac(ObjLock const& lock, Channel const chan, uint16_t const val)
 	{
 	    lastSetting[chan] = val;
 	    if (!zero_dac[chan] || !isOff(lock, chan))
 		baseAddr[DAC_OFFSET(chan)] = val;
 	}
 
-	uint16_t status(ObjLock const&, int const chan)
+	uint16_t status(ObjLock const&, Channel const chan)
 	{
 	    return 0x24ff & baseAddr[STS_OFFSET(chan)];
 	}
@@ -201,16 +217,13 @@ static STATUS objectInit(short const oid, V474::Card* const ptr, void const*,
 static STATUS devReading(short, RS_REQ const* const req, typReading* const rep,
 			 V474::Card* const* const ivs)
 {
-    chan_t const chan = REQ_TO_CHAN(req);
-
     if (req->ILEN != sizeof(typReading))
 	return ERR_BADLEN;
     if (req->OFFSET != 0)
 	return ERR_BADOFF;
-    if (chan >= N_CHAN)
-	return ERR_BADCHN;
 
     try {
+	V474::Channel const chan = V474::Channel(REQ_TO_CHAN(req));
 	V474::Card::Lock lock(**ivs);
 
 	*rep = (*ivs)->adc(lock, chan);
@@ -229,16 +242,13 @@ static STATUS devReadSetting(short, RS_REQ const* const req,
 			     typReading* const rep,
 			     V474::Card* const* const ivs)
 {
-    chan_t const chan = REQ_TO_CHAN(req);
-
     if (req->ILEN != sizeof(typReading))
 	return ERR_BADLEN;
     if (req->OFFSET != 0)
 	return ERR_BADOFF;
-    if (chan >= N_CHAN)
-	return ERR_BADCHN;
 
     try {
+	V474::Channel const chan = V474::Channel(REQ_TO_CHAN(req));
 	V474::Card::Lock lock(**ivs);
 
 	*rep = (*ivs)->dac(lock, chan);
@@ -256,16 +266,13 @@ static STATUS devReadSetting(short, RS_REQ const* const req,
 static STATUS devSetting(short, RS_REQ* req, void*,
 			 V474::Card* const* const ivs)
 {
-    chan_t const chan = REQ_TO_CHAN(req);
-
     if (req->ILEN != sizeof(typReading))
 	return ERR_BADLEN;
     if (req->OFFSET != 0)
 	return ERR_BADOFF;
-    if (chan >= N_CHAN)
-	return ERR_BADCHN;
 
     try {
+	V474::Channel const chan = V474::Channel(REQ_TO_CHAN(req));
 	V474::Card::Lock lock(**ivs);
 
 	(*ivs)->dac(lock, chan, DATAS(req));
@@ -283,16 +290,13 @@ static STATUS devSetting(short, RS_REQ* req, void*,
 static STATUS devBasicControl(short, RS_REQ const* const req, void*,
 			      V474::Card* const* const obj)
 {
-    chan_t const chan = REQ_TO_CHAN(req);
-
     if (req->ILEN != sizeof(typStatus))
 	return ERR_BADLEN;
     if (req->OFFSET != 0)
 	return ERR_BADOFF;
-    if (chan >= N_CHAN)
-	return ERR_BADCHN;
 
     try {
+	V474::Channel const chan = V474::Channel(REQ_TO_CHAN(req));
 	V474::Card::Lock lock(**obj);
 
 	switch (DATAS(req)) {
@@ -325,16 +329,13 @@ static STATUS devBasicStatus(short, RS_REQ const* const req,
 			     typStatus* const rep,
 			     V474::Card* const* const obj)
 {
-    chan_t const chan = REQ_TO_CHAN(req);
-
     if (req->ILEN != sizeof(typStatus))
 	return ERR_BADLEN;
     if (req->OFFSET != 0)
 	return ERR_BADOFF;
-    if (chan >= N_CHAN)
-	return ERR_BADCHN;
 
     try {
+	V474::Channel const chan = V474::Channel(REQ_TO_CHAN(req));
 	V474::Card::Lock lock(**obj);
 
 	*rep = (*obj)->status(lock, chan);
@@ -361,8 +362,8 @@ STATUS v474_create_mooc_instance(unsigned short const oid, uint8_t const addr,
 	if (cls == -1)
 	    throw std::runtime_error("V474 class is not registered with MOOC");
 
-	bool const zDac[N_CHAN] = { zCh0 != 0, zCh1 != 0,
-				    zCh2 != 0, zCh3 != 0 };
+	bool const zDac[V474::Channel::TOTAL] = { zCh0 != 0, zCh1 != 0,
+						  zCh2 != 0, zCh3 != 0 };
 
 	std::auto_ptr<V474::Card> ptr(new V474::Card(addr, zDac));
 
