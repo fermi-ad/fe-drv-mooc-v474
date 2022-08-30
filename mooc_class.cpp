@@ -136,13 +136,15 @@ namespace V474 {
 	    hw.set_element<regOnOff>(lock, chan, 0);
 	    if (zero_dac[chan])
 		hw.set_element<regDAC>(lock, chan, 0);
+	    hw.set_field<regLED>(lock, 1 << chan, 0);
 	}
 
 	void on(LockType const& lock, Channel const chan)
 	{
-	    hw.set_element<regOnOff>(lock, chan, 1);
 	    if (zero_dac[chan])
 		hw.set_element<regDAC>(lock, chan, lastSetting[chan]);
+	    hw.set_element<regOnOff>(lock, chan, 1);
+	    hw.set_field<regLED>(lock, 1 << chan, 1 << chan);
 	}
 
 	void reset(LockType const& lock, Channel const chan)
