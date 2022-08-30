@@ -11,7 +11,7 @@ Our development environment supports quite a few combinations of hardware
 and software platforms. Be sure to download from the appropriate area.
 
 | BSP    |VxWorks | File                                           |
-|========|========|================================================|
+|--------|--------|------------------------------------------------|
 | mv2401 | 6.4    | `vxworks_boot/v6.4/module/mv2401/v474-1.5.out` |
 | mv2434 | 6.4    | `vxworks_boot/v6.4/module/mv2434/v474-1.5.out` |
 | mv5500 | 6.4    | `vxworks_boot/v6.4/module/mv5500/v474-1.5.out` |
