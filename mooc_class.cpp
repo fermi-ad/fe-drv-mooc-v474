@@ -20,19 +20,6 @@ typedef unsigned char chan_t;
 
 #define DATAS(req)	(*(unsigned short const*)(req)->data)
 
-// Offsets into the memory map.
-
-#define BASE_OFFSET(o)	((o) / sizeof(uint16_t))
-
-#define DAC_OFFSET(c)	BASE_OFFSET((c) << 4)
-#define ADC_OFFSET(c)	BASE_OFFSET(0x100 + ((c) << 4))
-#define STS_OFFSET(c)	BASE_OFFSET(0x200 + ((c) << 4))
-#define ONOFF_OFFSET(c)	BASE_OFFSET(0x300 + ((c) << 4))
-#define RESET_OFFSET(c)	BASE_OFFSET(0x302 + ((c) << 4))
-#define MODID_OFFSET	BASE_OFFSET(0xff00)
-#define VER_OFFSET	BASE_OFFSET(0xff02)
-#define RESET474_OFFSET	BASE_OFFSET(0xfffe)
-
 // Junk class. Some versions of GCC don't honor the
 // constructor/destructor attributes unless there's a C++ global
 // object needing to be created/destroyed. This small section creates
@@ -69,92 +56,124 @@ namespace V474 {
 	operator size_t() const { return value; }
     };
 
+    // This class is used to formalize the weird hardware mapping. The
+    // channel number is placed in bits 4 through 7, so we can't use
+    // an array of 16-bit ints to access the registers. This class
+    // sets the step size to be 16 but still accesses each element as
+    // a 16-bit value.
+
+    template <VME::AddressSpace Space, typename T, size_t Offset>
+    struct RegArray {
+	typedef T Type;
+	typedef T AtomicType;
+
+	static VME::AddressSpace const space = Space;
+
+	enum { RegOffset = Offset, RegEntries = Channel::TOTAL };
+
+	static Type read(uint8_t volatile* const base,
+			 size_t const idx) NOTHROW_IMPL
+	{
+	    return VME::ReadAPI<Type, Offset, VME::Read>::readMem(base, idx * 16);
+	}
+
+	static void write(uint8_t volatile* const base,
+			  size_t const idx, Type const& v) NOTHROW_IMPL
+	{
+	    VME::WriteAPI<Type, Offset, VME::Write>::writeMem(base, idx * 16, v);
+	}
+    };
+
     // This class controls the underlying hardware.
 
     class Card : public Uncopyable {
-	uint16_t volatile* const baseAddr;
 	Mutex mutex;
-
-	bool zero_dac[Channel::TOTAL];
-	uint16_t lastSetting[Channel::TOTAL];
-
-	static uint16_t* computeBaseAddr(uint8_t);
 
      public:
 	typedef Mutex::PMLock<Card, &Card::mutex> LockType;
 
+     private:
+	typedef VME::Memory<VME::A24, VME::D16, 65536, LockType> REG_BANK;
+
+	REG_BANK const hw;
+	bool zero_dac[Channel::TOTAL];
+	uint16_t lastSetting[Channel::TOTAL];
+
+	// Define the registers in the V474 card.
+
+	typedef RegArray<VME::A24, int16_t, 0x0000> regDAC;
+	typedef RegArray<VME::A24, int16_t, 0x0100> regADC;
+	typedef RegArray<VME::A24, uint16_t, 0x0200> regStatus;
+	typedef RegArray<VME::A24, uint16_t, 0x0300> regOnOff;
+	typedef RegArray<VME::A24, uint16_t, 0x0302> regReset;
+	typedef VME::Register<VME::A24, uint16_t, 0xff00, VME::Read, VME::NoWrite> regModuleId;
+	typedef VME::Register<VME::A24, uint16_t, 0xff02, VME::Read, VME::NoWrite> regVersion;
+	typedef VME::Register<VME::A24, uint16_t, 0xff10, VME::Read, VME::Write> regLED;
+
+     public:
 	Card(uint8_t const dip, bool const zdac[Channel::TOTAL]) :
-	    baseAddr(computeBaseAddr(dip))
+	    hw(dip << 16)
 	{
 	    zero_dac[0] = zdac[0];
 	    zero_dac[1] = zdac[1];
 	    zero_dac[2] = zdac[2];
 	    zero_dac[3] = zdac[3];
 
-	    if (baseAddr[MODID_OFFSET] != 0x01da)
+	    LockType lock(this);
+
+	    if (hw.get<regModuleId>(lock) != 0x01da)
 		throw std::runtime_error("Did not find V474 at configured "
 					 "address");
 
-	    lastSetting[0] = baseAddr[DAC_OFFSET(0)];
-	    lastSetting[1] = baseAddr[DAC_OFFSET(1)];
-	    lastSetting[2] = baseAddr[DAC_OFFSET(2)];
-	    lastSetting[3] = baseAddr[DAC_OFFSET(3)];
+	    lastSetting[0] = hw.get_element<regDAC>(lock, 0);
+	    lastSetting[1] = hw.get_element<regDAC>(lock, 1);
+	    lastSetting[2] = hw.get_element<regDAC>(lock, 2);
+	    lastSetting[3] = hw.get_element<regDAC>(lock, 3);
 	}
 
-	void off(LockType const&, Channel const chan)
+	void off(LockType const& lock, Channel const chan)
 	{
-	    baseAddr[ONOFF_OFFSET(chan)] = 0;
+	    hw.set_element<regOnOff>(lock, chan, 0);
 	    if (zero_dac[chan])
-		baseAddr[DAC_OFFSET(chan)] = 0;
+		hw.set_element<regDAC>(lock, chan, 0);
 	}
 
-	void on(LockType const&, Channel const chan)
+	void on(LockType const& lock, Channel const chan)
 	{
-	    baseAddr[ONOFF_OFFSET(chan)] = 1;
+	    hw.set_element<regOnOff>(lock, chan, 1);
 	    if (zero_dac[chan])
-		baseAddr[DAC_OFFSET(chan)] = lastSetting[chan];
+		hw.set_element<regDAC>(lock, chan, lastSetting[chan]);
 	}
 
-	void reset(LockType const&, Channel const chan)
+	void reset(LockType const& lock, Channel const chan)
 	{
-	    baseAddr[RESET_OFFSET(chan)] = 1;
+	    hw.set_element<regReset>(lock, chan, 1);
 	}
 
 	bool isOff(LockType const& lock, Channel const chan)
 	{ return (status(lock, chan) & 0x400) == 0; }
 
-	uint16_t adc(LockType const&, Channel const chan)
-	{ return baseAddr[ADC_OFFSET(chan)]; }
+	uint16_t adc(LockType const& lock, Channel const chan)
+	{ return hw.get_element<regADC>(lock, chan); }
 
 	uint16_t dac(LockType const& lock, Channel const chan)
 	{
 	    return (zero_dac[chan] && isOff(lock, chan)) ?
-		lastSetting[chan] : baseAddr[DAC_OFFSET(chan)];
+		lastSetting[chan] : hw.get_element<regDAC>(lock, chan);
 	}
 
 	void dac(LockType const& lock, Channel const chan, uint16_t const val)
 	{
 	    lastSetting[chan] = val;
 	    if (!zero_dac[chan] || !isOff(lock, chan))
-		baseAddr[DAC_OFFSET(chan)] = val;
+		hw.set_element<regDAC>(lock, chan, val);
 	}
 
-	uint16_t status(LockType const&, Channel const chan)
+	uint16_t status(LockType const& lock, Channel const chan)
 	{
-	    return 0x24ff & baseAddr[STS_OFFSET(chan)];
+	    return 0x24ff & hw.get_element<regStatus>(lock, chan);
 	}
     };
-
-    uint16_t* Card::computeBaseAddr(uint8_t const dip)
-    {
-	char* tmp;
-	uint32_t const addr = (uint32_t) dip << 16;
-
-	if (ERROR == sysBusToLocalAdrs(VME_AM_STD_SUP_DATA,
-				       reinterpret_cast<char*>(addr), &tmp))
-	    throw std::runtime_error("illegal A24 VME address");
-	return reinterpret_cast<uint16_t*>(tmp);
-    }
 };
 
 typedef int16_t typReading;
