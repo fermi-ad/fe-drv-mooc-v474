@@ -129,6 +129,11 @@ namespace V474 {
 	    lastSetting[1] = hw.get_element<regDAC>(lock, 1);
 	    lastSetting[2] = hw.get_element<regDAC>(lock, 2);
 	    lastSetting[3] = hw.get_element<regDAC>(lock, 3);
+
+	    uint16_t const version = hw.get<regVersion>(lock);
+
+	    logInform3(V474::hLog, "V474 found (version %d.%d, DIP switch %d)",
+		       version / 256, version % 256, dip);
 	}
 
 	void off(LockType const& lock, Channel const chan)
