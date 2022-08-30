@@ -75,21 +75,13 @@ namespace V474 {
 	uint16_t volatile* const baseAddr;
 	Mutex mutex;
 
-	typedef Mutex::PMLock<Card, &Card::mutex> ObjLock;
-
 	bool zero_dac[Channel::TOTAL];
 	uint16_t lastSetting[Channel::TOTAL];
 
 	static uint16_t* computeBaseAddr(uint8_t);
 
      public:
-	class Lock : public NoHeap {
-	    ObjLock lock;
-
-	 public:
-	    explicit Lock(Card& card) : lock(&card) {}
-	    operator ObjLock const& () { return lock; }
-	};
+	typedef Mutex::PMLock<Card, &Card::mutex> LockType;
 
 	Card(uint8_t const dip, bool const zdac[Channel::TOTAL]) :
 	    baseAddr(computeBaseAddr(dip))
@@ -109,45 +101,45 @@ namespace V474 {
 	    lastSetting[3] = baseAddr[DAC_OFFSET(3)];
 	}
 
-	void off(ObjLock const&, Channel const chan)
+	void off(LockType const&, Channel const chan)
 	{
 	    baseAddr[ONOFF_OFFSET(chan)] = 0;
 	    if (zero_dac[chan])
 		baseAddr[DAC_OFFSET(chan)] = 0;
 	}
 
-	void on(ObjLock const&, Channel const chan)
+	void on(LockType const&, Channel const chan)
 	{
 	    baseAddr[ONOFF_OFFSET(chan)] = 1;
 	    if (zero_dac[chan])
 		baseAddr[DAC_OFFSET(chan)] = lastSetting[chan];
 	}
 
-	void reset(ObjLock const&, Channel const chan)
+	void reset(LockType const&, Channel const chan)
 	{
 	    baseAddr[RESET_OFFSET(chan)] = 1;
 	}
 
-	bool isOff(ObjLock const& lock, Channel const chan)
+	bool isOff(LockType const& lock, Channel const chan)
 	{ return (status(lock, chan) & 0x400) == 0; }
 
-	uint16_t adc(ObjLock const&, Channel const chan)
+	uint16_t adc(LockType const&, Channel const chan)
 	{ return baseAddr[ADC_OFFSET(chan)]; }
 
-	uint16_t dac(ObjLock const& lock, Channel const chan)
+	uint16_t dac(LockType const& lock, Channel const chan)
 	{
 	    return (zero_dac[chan] && isOff(lock, chan)) ?
 		lastSetting[chan] : baseAddr[DAC_OFFSET(chan)];
 	}
 
-	void dac(ObjLock const& lock, Channel const chan, uint16_t const val)
+	void dac(LockType const& lock, Channel const chan, uint16_t const val)
 	{
 	    lastSetting[chan] = val;
 	    if (!zero_dac[chan] || !isOff(lock, chan))
 		baseAddr[DAC_OFFSET(chan)] = val;
 	}
 
-	uint16_t status(ObjLock const&, Channel const chan)
+	uint16_t status(LockType const&, Channel const chan)
 	{
 	    return 0x24ff & baseAddr[STS_OFFSET(chan)];
 	}
@@ -224,7 +216,7 @@ static STATUS devReading(short, RS_REQ const* const req, typReading* const rep,
 
     try {
 	V474::Channel const chan = V474::Channel(REQ_TO_CHAN(req));
-	V474::Card::Lock lock(**ivs);
+	V474::Card::LockType lock(*ivs);
 
 	*rep = (*ivs)->adc(lock, chan);
 	return NOERR;
@@ -249,7 +241,7 @@ static STATUS devReadSetting(short, RS_REQ const* const req,
 
     try {
 	V474::Channel const chan = V474::Channel(REQ_TO_CHAN(req));
-	V474::Card::Lock lock(**ivs);
+	V474::Card::LockType lock(*ivs);
 
 	*rep = (*ivs)->dac(lock, chan);
 	return NOERR;
@@ -273,7 +265,7 @@ static STATUS devSetting(short, RS_REQ* req, void*,
 
     try {
 	V474::Channel const chan = V474::Channel(REQ_TO_CHAN(req));
-	V474::Card::Lock lock(**ivs);
+	V474::Card::LockType lock(*ivs);
 
 	(*ivs)->dac(lock, chan, DATAS(req));
 	return NOERR;
@@ -297,7 +289,7 @@ static STATUS devBasicControl(short, RS_REQ const* const req, void*,
 
     try {
 	V474::Channel const chan = V474::Channel(REQ_TO_CHAN(req));
-	V474::Card::Lock lock(**obj);
+	V474::Card::LockType lock(*obj);
 
 	switch (DATAS(req)) {
 	 case 1:
@@ -336,7 +328,7 @@ static STATUS devBasicStatus(short, RS_REQ const* const req,
 
     try {
 	V474::Channel const chan = V474::Channel(REQ_TO_CHAN(req));
-	V474::Card::Lock lock(**obj);
+	V474::Card::LockType lock(*obj);
 
 	*rep = (*obj)->status(lock, chan);
 	return NOERR;
