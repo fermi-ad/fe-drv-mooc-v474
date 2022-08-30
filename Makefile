@@ -7,5 +7,5 @@ MOD_TARGETS = v474.out
 
 include ${PRODUCTS_INCDIR}frontend.mk
 
-v474.out : mooc_class.o ${PRODUCTS_LIBDIR}libvwpp-2.4.a
+v474.out : mooc_class.o ${PRODUCTS_LIBDIR}libvwpp-3.0.a
 	${make-mod}

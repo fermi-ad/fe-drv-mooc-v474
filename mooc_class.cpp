@@ -2,7 +2,7 @@
 #include <vme.h>
 #include <sysLib.h>
 #include <vector>
-#include <vwpp-2.4.h>
+#include <vwpp-3.0.h>
 #include <errlogLib-2.0.h>
 #include <mooc++-4.6.h>
 
@@ -53,20 +53,21 @@ namespace V474 {
 };
 
 namespace V474 {
+    using namespace vwpp::v3_0;
 
-    class Card : public vwpp::Uncopyable {
+    class Card : public Uncopyable {
 	uint16_t volatile* const baseAddr;
-	vwpp::Mutex mutex;
+	Mutex mutex;
 
-	typedef vwpp::Mutex::PMLock<Card, &Card::mutex> ObjLock;
+	typedef Mutex::PMLock<Card, &Card::mutex> ObjLock;
 
-	std::vector<bool> const zero_dac;
+	bool zero_dac[N_CHAN];
 	uint16_t lastSetting[N_CHAN];
 
 	static uint16_t* computeBaseAddr(uint8_t);
 
      public:
-	class Lock : public vwpp::NoHeap {
+	class Lock : public NoHeap {
 	    ObjLock lock;
 
 	 public:
@@ -75,9 +76,13 @@ namespace V474 {
 	};
 
 	Card(uint8_t const dip, bool const zdac[N_CHAN]) :
-	    baseAddr(computeBaseAddr(dip)),
-	    zero_dac(zdac, zdac + N_CHAN)
+	    baseAddr(computeBaseAddr(dip))
 	{
+	    zero_dac[0] = zdac[0];
+	    zero_dac[1] = zdac[1];
+	    zero_dac[2] = zdac[2];
+	    zero_dac[3] = zdac[3];
+
 	    if (baseAddr[MODID_OFFSET] != 0x01da)
 		throw std::runtime_error("Did not find V474 at configured "
 					 "address");
@@ -91,14 +96,14 @@ namespace V474 {
 	void off(ObjLock const&, int const chan)
 	{
 	    baseAddr[ONOFF_OFFSET(chan)] = 0;
-	    if (zero_dac.at(chan))
+	    if (zero_dac[chan])
 		baseAddr[DAC_OFFSET(chan)] = 0;
 	}
 
 	void on(ObjLock const&, int const chan)
 	{
 	    baseAddr[ONOFF_OFFSET(chan)] = 1;
-	    if (zero_dac.at(chan))
+	    if (zero_dac[chan])
 		baseAddr[DAC_OFFSET(chan)] = lastSetting[chan];
 	}
 
@@ -115,14 +120,14 @@ namespace V474 {
 
 	uint16_t dac(ObjLock const& lock, int const chan)
 	{
-	    return (zero_dac.at(chan) && isOff(lock, chan)) ?
+	    return (zero_dac[chan] && isOff(lock, chan)) ?
 		lastSetting[chan] : baseAddr[DAC_OFFSET(chan)];
 	}
 
 	void dac(ObjLock const& lock, int const chan, uint16_t const val)
 	{
 	    lastSetting[chan] = val;
-	    if (!zero_dac.at(chan) || !isOff(lock, chan))
+	    if (!zero_dac[chan] || !isOff(lock, chan))
 		baseAddr[DAC_OFFSET(chan)] = val;
 	}
 
