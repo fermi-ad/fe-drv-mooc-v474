@@ -5,6 +5,10 @@ against MOOC 4.6.
 
 Changes in v1.5:
 
+- Uses v2.4 of VXPP library.
+- Uses error logger instead of `printf`.
+- Bug fix: use `volatile` pointer to hardware.
+
 # Location
 
 Our development environment supports quite a few combinations of hardware
@@ -15,6 +19,3 @@ and software platforms. Be sure to download from the appropriate area.
 | mv2401 | 6.4    | `vxworks_boot/v6.4/module/mv2401/v474-1.5.out` |
 | mv2434 | 6.4    | `vxworks_boot/v6.4/module/mv2434/v474-1.5.out` |
 | mv5500 | 6.4    | `vxworks_boot/v6.4/module/mv5500/v474-1.5.out` |
-| mv2401 | 6.7    | `vxworks_boot/v6.7/module/mv2401/v474-1.5.out` |
-| mv2434 | 6.7    | `vxworks_boot/v6.7/module/mv2434/v474-1.5.out` |
-| mv5500 | 6.7    | `vxworks_boot/v6.7/module/mv5500/v474-1.5.out` |
