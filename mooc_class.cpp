@@ -251,7 +251,8 @@ static STATUS devReading(short, RS_REQ const* const req, typReading* const rep,
 	return status;
     }
     catch (std::exception const& e) {
-	printf("ERROR: devReading threw exception -- %s", e.what());
+	logAlarm1(V474::hLog, 0, "ERROR: devReading threw exception -- %s",
+		  e.what());
 	return ERR_DEVICEERROR;
     }
 }
@@ -276,7 +277,8 @@ static STATUS devReadSetting(short, RS_REQ const* const req,
 	return status;
     }
     catch (std::exception const& e) {
-	printf("ERROR: devReadSetting threw exception -- %s", e.what());
+	logAlarm1(V474::hLog, 0, "ERROR: devReadSetting threw exception -- %s",
+		  e.what());
 	return ERR_DEVICEERROR;
     }
 }
@@ -300,7 +302,8 @@ static STATUS devSetting(short, RS_REQ* req, void*,
 	return status;
     }
     catch (std::exception const& e) {
-	printf("ERROR: devSetting threw exception -- %s", e.what());
+	logAlarm1(V474::hLog, 0, "ERROR: devSetting threw exception -- %s",
+		  e.what());
 	return ERR_DEVICEERROR;
     }
 }
@@ -338,7 +341,8 @@ static STATUS devBasicControl(short, RS_REQ const* const req, void*,
 	return status;
     }
     catch (std::exception const& e) {
-	printf("ERROR: devBasicControl threw exception -- %s", e.what());
+	logAlarm1(V474::hLog, 0, "ERROR: devBasicControl threw exception -- "
+		  "%s", e.what());
 	return ERR_DEVICEERROR;
     }
 }
@@ -363,7 +367,8 @@ static STATUS devBasicStatus(short, RS_REQ const* const req,
 	return status;
     }
     catch (std::exception const& e) {
-	printf("ERROR: devBasicStatus threw exception -- %s", e.what());
+	logAlarm1(V474::hLog, 0, "ERROR: devBasicStatus threw exception -- %s",
+		  e.what());
 	return ERR_DEVICEERROR;
     }
 }
@@ -390,14 +395,13 @@ STATUS v474_create_mooc_instance(unsigned short const oid, uint8_t const addr,
 		throw std::runtime_error("problem creating an instance");
 	    instance_is_reentrant(oid);
 	    logInform1(V474::hLog, "New instance of V474 created. Underlying "
-		       "object @ %p.\n", ptr.release());
+		       "object @ %p.", ptr.release());
 	}
 	return OK;
     }
     catch (std::exception const& e) {
 	logAlarm1(V474::hLog, 0, "Error creating V474 (oid: %d) instance.",
 		  oid);
-	printf("ERROR: %s\n", e.what());
 	return ERROR;
     }
 }
@@ -408,42 +412,46 @@ STATUS v474_create_mooc_instance(unsigned short const oid, uint8_t const addr,
 STATUS v474_create_mooc_class(uint8_t const cls)
 {
     if (cls < 16) {
-	printf("MOOC class codes need to be 16, or greater.\n");
+	logAlarm0(V474::hLog, 0, "MOOC class codes need to be 16, or "
+		  "greater.");
 	return ERROR;
     }
 
     short const scl[] = { ALRCLS };
 
     if (NOERR != create_class(cls, NELEMENTS(scl), scl, 6, sizeof(V474::Card*))) {
-	printf("Error returned from create_class()!\n");
+	logAlarm0(V474::hLog, 0, "Error returned from create_class()!");
 	return ERROR;
     }
     if (NOERR != name_class(cls, "V474")) {
-	printf("Error trying to name the class.\n");
+	logAlarm0(V474::hLog, 0, "Error trying to name the class.");
 	return ERROR;
     }
     if (NOERR != add_class_msg(cls, Init, (PMETHOD) objectInit)) {
-	printf("Error trying to add the Init handler.\n");
+	logAlarm0(V474::hLog, 0, "Error trying to add the Init handler.");
 	return ERROR;
     }
     if (NOERR != add_class_msg(cls, rPRREAD, (PMETHOD) devReading)) {
-	printf("Error trying to add the reading handler.\n");
+	logAlarm0(V474::hLog, 0, "Error trying to add the reading handler.");
 	return ERROR;
     }
     if (NOERR != add_class_msg(cls, rPRSET, (PMETHOD) devReadSetting)) {
-	printf("Error trying to add the reading-of-the-setting handler.\n");
+	logAlarm0(V474::hLog, 0, "Error trying to add the "
+		  "reading-of-the-setting handler.");
 	return ERROR;
     }
     if (NOERR != add_class_msg(cls, sPRSET, (PMETHOD) devSetting)) {
-	printf("Error trying to add the setting handler.\n");
+	logAlarm0(V474::hLog, 0, "Error trying to add the setting handler.");
 	return ERROR;
     }
     if (NOERR != add_class_msg(cls, rPRBSTS, (PMETHOD) devBasicStatus)) {
-	printf("Error trying to add the basic status handler.\n");
+	logAlarm0(V474::hLog, 0, "Error trying to add the basic status "
+		  "handler.");
 	return ERROR;
     }
     if (NOERR != add_class_msg(cls, sPRBCTL, (PMETHOD) devBasicControl)) {
-	printf("Error trying to add the basic control handler.\n");
+	logAlarm0(V474::hLog, 0, "Error trying to add the basic control "
+		  "handler.");
 	return ERROR;
     }
     return OK;
