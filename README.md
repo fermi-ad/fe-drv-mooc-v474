@@ -5,8 +5,10 @@ against MOOC 4.6.
 
 Changes in v1.5:
 
-- Uses v3.0 of VXPP library. Specifically, portions were rewritten to
-  use the `VME::Memory` templates.
+- Uses v3.0 of the [VXPP library](https://github.com/fermi-controls/vxpp/wiki).
+  Specifically, portions were rewritten to use the
+  [`VME::Memory`](https://github.com/fermi-controls/vxpp/wiki/Memory-Spaces)
+  templates.
 - Uses error logger instead of `printf`.
 - Uses front panel LEDs to indicate state of channels.
 - Bug fix: use `volatile` pointer to hardware.
