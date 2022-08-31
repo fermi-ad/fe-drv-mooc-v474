@@ -56,9 +56,8 @@ namespace V474 {
     // This class is used to formalize the weird hardware mapping. The
     // channel number is placed in bits 4 through 7, so we can't use
     // an array of 16-bit ints to access the registers. This class
-    // sets the step size to be 8 but still accesses each element as a
-    // 16-bit value. ("8" is used because the element size is 16 bits
-    // so 8, 16-bit values steps 16 bytes in memory.)
+    // sets the step size to be 16 but still accesses each element as a
+    // 16-bit value.
 
     template <VME::AddressSpace Space, typename T, size_t Offset>
     struct RegArray {
