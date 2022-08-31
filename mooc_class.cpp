@@ -158,13 +158,13 @@ namespace V474 {
 	    hw.set_element<regReset>(lock, chan, 1);
 	}
 
-	bool isOff(LockType const& lock, Channel const chan)
+	bool isOff(LockType const& lock, Channel const chan) const
 	{ return (status(lock, chan) & 0x400) == 0; }
 
-	uint16_t adc(LockType const& lock, Channel const chan)
+	uint16_t adc(LockType const& lock, Channel const chan) const
 	{ return hw.get_element<regADC>(lock, chan); }
 
-	uint16_t dac(LockType const& lock, Channel const chan)
+	uint16_t dac(LockType const& lock, Channel const chan) const
 	{
 	    return (zero_dac[chan] && isOff(lock, chan)) ?
 		lastSetting[chan] : hw.get_element<regDAC>(lock, chan);
@@ -177,7 +177,7 @@ namespace V474 {
 		hw.set_element<regDAC>(lock, chan, val);
 	}
 
-	uint16_t status(LockType const& lock, Channel const chan)
+	uint16_t status(LockType const& lock, Channel const chan) const
 	{
 	    return 0x24ff & hw.get_element<regStatus>(lock, chan);
 	}
