@@ -17,7 +17,7 @@ Changes in v1.5:
 
 # Location
 
-Our development environment supports quite a few combinations of hardware
+Our development environment supports a few combinations of hardware
 and software platforms. Be sure to download from the appropriate area.
 
 | BSP    |VxWorks | File                                           |
