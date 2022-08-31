@@ -59,8 +59,9 @@ namespace V474 {
     // This class is used to formalize the weird hardware mapping. The
     // channel number is placed in bits 4 through 7, so we can't use
     // an array of 16-bit ints to access the registers. This class
-    // sets the step size to be 16 but still accesses each element as
-    // a 16-bit value.
+    // sets the step size to be 8 but still accesses each element as a
+    // 16-bit value. ("8" is used because the element size is 16 bits
+    // so 8, 16-bit values steps 16 bytes in memory.)
 
     template <VME::AddressSpace Space, typename T, size_t Offset>
     struct RegArray {
@@ -74,13 +75,13 @@ namespace V474 {
 	static Type read(uint8_t volatile* const base,
 			 size_t const idx) NOTHROW_IMPL
 	{
-	    return VME::ReadAPI<Type, Offset, VME::Read>::readMem(base, idx * 16);
+	    return VME::ReadAPI<Type, Offset, VME::Read>::readMem(base, idx * 8);
 	}
 
 	static void write(uint8_t volatile* const base,
 			  size_t const idx, Type const& v) NOTHROW_IMPL
 	{
-	    VME::WriteAPI<Type, Offset, VME::Write>::writeMem(base, idx * 16, v);
+	    VME::WriteAPI<Type, Offset, VME::Write>::writeMem(base, idx * 8, v);
 	}
     };
 
