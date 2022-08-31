@@ -15,7 +15,7 @@ Changes in v1.5:
 - Uses front panel LEDs to indicate state of channels.
 - Bug fix: use `volatile` pointer to hardware.
 
-# Location
+## Location
 
 Our development environment supports a few combinations of hardware
 and software platforms. Be sure to download from the appropriate area.
