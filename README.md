@@ -1,7 +1,9 @@
 # V474 Driver for MOOC
 
-The V474 is a VME card that controls four power supplies. This driver is built
-against MOOC 4.6.
+The V474 is a VME card that controls four power supplies. Its
+documentation can be found
+[here](https://www-bd.fnal.gov/controls/vme_modules/V474.pdf). This
+driver is built against MOOC 4.6.
 
 Changes in v1.5:
 
