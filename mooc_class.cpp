@@ -75,13 +75,17 @@ namespace V474 {
 	static Type read(uint8_t volatile* const base,
 			 size_t const idx) NOTHROW_IMPL
 	{
-	    return VME::ReadAPI<Type, Offset, VME::Read>::readMem(base, idx * 8);
+	    typedef VME::ReadAPI<Type, Offset, VME::Read> API;
+
+	    return API::readMem(base, idx * (16 / sizeof(Type)));
 	}
 
 	static void write(uint8_t volatile* const base,
 			  size_t const idx, Type const& v) NOTHROW_IMPL
 	{
-	    VME::WriteAPI<Type, Offset, VME::Write>::writeMem(base, idx * 8, v);
+	    typedef VME::WriteAPI<Type, Offset, VME::Write> API;
+
+	    API::writeMem(base, idx * (16 / sizeof(Type)), v);
 	}
     };
 
