@@ -6,9 +6,6 @@
 #include <errlogLib-2.0.h>
 #include <mooc++-4.6.h>
 
-int v474_lock_tmo = 1500;
-int v474_debug = 0;
-
 typedef unsigned char chan_t;
 
 // Include some macros used by the CAMAC front-ends. The V474 and V473
